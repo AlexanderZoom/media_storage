@@ -33,7 +33,18 @@ class Media_Storage_Location_Local extends Media_Storage_Location {
         );
         $fileInfo = array_merge($fileInfoDefault, $fileInfo);
          
-        if (!file_exists($fileInfo['file']) || !is_readable($fileInfo['file'])){
+        if ($fileInfo['file'] instanceof Model_Media_Storage_File && $fileInfo['file']->isFile()){
+            $lc = Media_Storage_Main::getInstance()->getLocation($fileInfo['file']->location_code);
+            if ($this->getHostId() != $lc->getHostId()){
+                throw new Media_Storage_Exception_Location_UploadFile('File copy from diferent host not implemented');
+            }
+            
+            $fileInfo['name'] = $fileInfo['file']->name;
+            $fileInfo['file'] = $lc->getDirectoryObject()->getFullPath($fileInfo['file']->location_path . DIRECTORY_SEPARATOR . $fileInfo['file']->file_name);
+        }
+        
+        
+        if (!is_readable($fileInfo['file'])){
             throw new Media_Storage_Exception_Location_UploadFile('File not exists or not readable ' . $fileInfo['file']);
         }
          
@@ -94,7 +105,7 @@ class Media_Storage_Location_Local extends Media_Storage_Location {
          
         $this->_directory->addReservedSpace($fileSize);
         try {
-            $newFile = $this->_directory->uploadFile($fileInfo['data_type'], $fileInfo['file'], $fileNameExt);
+            $newFile = $this->_directory->getFileObject()->uploadFile($fileInfo['data_type'], $fileInfo['file'], $fileNameExt);
              
              
             //check on dup
@@ -121,6 +132,7 @@ class Media_Storage_Location_Local extends Media_Storage_Location {
                         $model->file_size = $fileSize;
                         $model->file_mime = $fileMime;
                         $model->name = $fileName;
+                        $model->type = Model_Media_Storage_File::FILE_TYPE_NORMAL;
                         $model->private = $fileInfo['data_type'] == self::DATA_TYPE_PRIVATE
                         ? Model_Media_Storage_File::FILE_PRIVATE_YES : Model_Media_Storage_File::FILE_PRIVATE_NO;
                         $model->status = Model_Media_Storage_File::FILE_STATUS_OK;
@@ -142,7 +154,7 @@ class Media_Storage_Location_Local extends Media_Storage_Location {
                 }
             }
             catch (Exception $e){
-                $this->_directory->deleteFile($newFile);
+                $this->_directory->getFileObject()->deleteFile($newFile);
                 throw $e;
             }
         }

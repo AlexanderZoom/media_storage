@@ -14,6 +14,7 @@ class Model_Media_Storage_File extends ORM {
     protected $_updated_column = array('column' => 'updated_at', 'format' => 'Y-m-d H:i:s');
     protected $_load_with = array('extra');
     
+    
     protected $_has_one = array(
         'extra' => array(
             'model' => 'Media_Storage_FileExtra',
@@ -21,6 +22,7 @@ class Model_Media_Storage_File extends ORM {
         ),
     );
     
+    protected $_isFolderRoot = false;
     
     const FILE_STATUS_UPLOAD     = 'upload';
     const FILE_STATUS_OK         = 'ok';
@@ -30,6 +32,11 @@ class Model_Media_Storage_File extends ORM {
     
     const FILE_PRIVATE_YES = 'yes';
     const FILE_PRIVATE_NO  = 'no';
+    
+    const FILE_TYPE_FOLDER = 0;
+    const FILE_TYPE_NORMAL = 10000;
+    const FILE_TYPE_THUMB = 50000;
+    
     
     public function rules(){
         
@@ -103,6 +110,7 @@ class Model_Media_Storage_File extends ORM {
             'file_size'       => ___('media_storage.fields.file_size'),
             'file_mime'       => ___('media_storage.fields.file_mime'),
             'name'            => ___('media_storage.fields.file.name'),
+            'type'            => ___('media_storage.fields.file.type'),
             'private'         => ___('media_storage.fields.private'),
             'status'          => ___('media_storage.fields.status'),
             'created_at'      => ___('media_storage.fields.created_at'),
@@ -111,9 +119,68 @@ class Model_Media_Storage_File extends ORM {
         );
     }
     
+    public function rootFolder($categoryCode){
+        $this->id = '';
+        $this->category_code = $categoryCode;
+        $this->location_code = '$' . $categoryCode;
+        $this->type = self::FILE_TYPE_FOLDER;
+        $this->name = '';
+        $this->file_name = '';
+        $this->_isFolderRoot = true;
+        
+    }
+    
+    public function isFile(){
+        return ($this->loaded() && $this->status != Model_Media_Storage_File::FILE_STATUS_OK
+                && $this->type < Model_Media_Storage_File::FILE_TYPE_NORMAL);
+    }
+    
     public function delete(){
+        if ($this->_isFolderRoot){
+            throw new Kohana_Exception('Cannot delete root folder');
+        }
+        
+        if ( ! $this->_loaded)
+            throw new Kohana_Exception('Cannot delete :model model because it is not loaded.', array(':model' => $this->_object_name));
+        
+        if ($this->type == self::FILE_TYPE_FOLDER){
+            //check contains
+            $fileModel = DB::select(DB::expr('COUNT(`id`) AS `total`'))->from($this->table_name());
+    	    $fileModel->where('category_code', '=', $this->category_code);
+    	    $fileModel->and_where('location_code', '=', $this->location_code);
+    	    $fileModel->and_where('status', '<>', self::FILE_STATUS_DELETED);
+    	    $fileModel->and_where_open();
+    	    $fileModel->where_open();
+    	    $fileModel->where('vfolder_id', '=', $this->id);
+    	    $fileModel->and_where('type', '<>', self::FILE_TYPE_FOLDER);
+    	    $fileModel->where_close();
+    	    $fileModel->or_where_open();
+    	    $fileModel->where('location_path', 'like', $this->location_path . '%');
+    	    $fileModel->and_where('type', '=', self::FILE_TYPE_FOLDER);
+    	    $fileModel->or_where_close();
+    	    $fileModel->and_where_close();
+    	    $fileModel->limit(1);
+    	    if ($fileModel->execute()->get('total')){
+    	        throw new Kohana_Exception('Cannot delete :model model because it is folder not empty', array(':model' => $this->_object_name));
+    	    }
+        }
+        
         if ($this->extra->loaded()) $this->extra->delete();
         parent::delete();
+    }
+    
+    public function getElementsCount($subfolders = true){
+        if ( ! $this->_loaded) return 0;
+        
+        if ($this->type != self::FILE_TYPE_FOLDER){
+            throw new Kohana_Exception('Only for folder');
+        }
+        
+        $path = $this->location_path . '/' . $this->file_name;
+        
+        $fileModel = DB::select(DB::expr('COUNT(`id`) AS `total`'))->from($this->table_name());
+        //$fileModel->where($column, $op, $value)
+        
     }
     
     /**
@@ -130,8 +197,22 @@ class Model_Media_Storage_File extends ORM {
         return $statuses;
     }
     
+    public function update(Validation $validation = NULL){
+        if ($this->_isFolderRoot){
+            throw new Kohana_Exception('Cannot update root folder');
+        }
+        
+        parent::update($validation);
+    }
+    
     public function create(Validation $validation = NULL)
     {
+        if ($this->_isFolderRoot){
+            throw new Kohana_Exception('Cannot create root folder');
+        }
+        
+        if (is_null($this->type)) $this->type = self::FILE_TYPE_NORMAL;
+        
         $try = 7;
         if (!$this->id){
             

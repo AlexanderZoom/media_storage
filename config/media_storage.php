@@ -9,8 +9,8 @@ return array
         
         // file system options
         'folder_max' => 256, // folder max quantity
-        'subfolder_max' => 4, // subfolder max quantity
-        'file_max' => 3, // file max quantity
+        'subfolder_max' => 128, // subfolder max quantity
+        'file_max' => 256, // file max quantity
         'file_length' => 9, // length file name without extension
         'thumb_width' => '150', // width thumb for picture
         'thumb_height' => '150', // width thumb for picture
@@ -27,7 +27,7 @@ return array
         'main' => array //server code
         (
             'type'       => 'local',
-            'host_id'   => '%www_host%', // must be equal value from global current_host (check hash access token on upload and private download)
+            'host_id'   => 'myhost', // must be equal value from global current_host (check hash access token on upload and private download)
             'data_type'  => array(Media_Storage_Location::DATA_TYPE_PUBLIC),
             'path'       => '%www_dir%/media',
             'url'        => '%www_url%/media', //path to the location for public url
@@ -51,7 +51,7 @@ return array
         'private' => array //server code
         (
             'type'       => 'local',
-            'host_id'   => '%www_host%', // must be equal value from global current_host (check hash access token on upload and private download)
+            'host_id'   => 'myhost', // must be equal value from global current_host (check hash access token on upload and private download)
             'data_type'  => array(Media_Storage_Location::DATA_TYPE_PRIVATE),
             'path'       => '%www_dir%/../private_media',
             'url'        => '%www_url%/media',

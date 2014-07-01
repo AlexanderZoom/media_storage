@@ -271,7 +271,7 @@ class Controller_Media_Storage extends Controller {
             $params['error_code'] = 'ERROR_TOKEN_ACTION';
         }
         catch (Exception $e){
-            $params['error'] = 'Unknown error';
+            $params['error'] = 'Unknown error' . $e->getMessage();
             $params['error_code'] = 'ERROR_UNKNOWN';
         }
         

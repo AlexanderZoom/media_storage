@@ -111,15 +111,15 @@ abstract class Media_Storage_Location {
 	 * @param unknown $file file name with relative path
 	 */
 	public function isFileExist($file){
-	    return $this->_directory->isFileExist($file);
+	    return $this->_directory->getFileObject()->isFileExist($file);
 	}
 	
 	public function getFileContent($file, $start = null, $stop = null){
-	    $this->_directory->getFileContent($file, $start, $stop);
+	    $this->_directory->getFileObject()->getFileContent($file, $start, $stop);
 	}
 	
 	public function getFileSize($file){
-	    return $this->_directory->getFilesize($file);
+	    return $this->_directory->getFileObject()->getFilesize($file);
 	}
 	
 	public function getUploadUrl(Model_Media_Storage_AccessToken $token){
@@ -127,6 +127,11 @@ abstract class Media_Storage_Location {
 	    return Util_Url::addParameter($this->_model->url_post_upload,
 	                                  array('token' => $token->generateToken()));
 	}
+	
+	public function getDirectoryObject(){
+	    return $this->_directory;
+	}
+	
 	
 	/**
 	 *
@@ -144,10 +149,10 @@ abstract class Media_Storage_Location {
 	}
 	
 	public function getFileETag($file){
-	    return $this->_directory->getFileETag($file);
+	    return $this->_directory->getFileObject()->getFileETag($file);
 	}
 	
 	public function getFileLastModified($file){
-	    return $this->_directory->getFileLastModified($file);
+	    return $this->_directory->getFileObject()->getFileLastModified($file);
 	}
 }

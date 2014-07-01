@@ -12,4 +12,8 @@ class Media_Storage_Directory_Ftp extends Media_Storage_Directory {
         throw new Exception('Ftp Directory not implemented');
         parent::__construct($location);
     }
+    
+    public function init(){
+        $this->_fileObject = new Media_Storage_File_Ftp($this);
+    }
 }
